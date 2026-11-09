@@ -26,13 +26,18 @@ public class AutoSurvival {
             }
         }
         // Autonomous wander (deterministic, no AI cost): move to a nearby random spot
-        if (RAND.nextInt(4) == 0) {
-            int dx = RAND.nextInt(7) - 3;
-            int dz = RAND.nextInt(7) - 3;
+        // Walk one step at a time (like a player) instead of teleporting far.
+        if (RAND.nextInt(2) == 0) {
+            int dx = RAND.nextInt(3) - 1;
+            int dz = RAND.nextInt(3) - 1;
+            if (dx == 0 && dz == 0) { dx = 1; }
             BlockPos np = rt.position.add(dx, 0, dz);
-            // keep on surface
             int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, np.getX(), np.getZ());
-            rt.position = new BlockPos(np.getX(), y, np.getZ());
+            // avoid big drops
+            if (Math.abs(y - rt.position.getY()) <= 2) {
+                rt.position = new BlockPos(np.getX(), y, np.getZ());
+                CivilizationMod.LOGGER.info("Walk {} -> {}", rt.identity.name(), rt.position);
+            }
         }
         // MLG clutch: if falling, place water (placeholder, no AI)
         // Occasional autonomous chatter (no AI cost)

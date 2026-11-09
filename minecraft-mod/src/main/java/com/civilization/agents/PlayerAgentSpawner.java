@@ -19,6 +19,8 @@ public class PlayerAgentSpawner {
             player.refreshPositionAndAngles(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0F, 0.0F);
             player.setCustomName(Text.literal(rt.identity.name()));
             player.setCustomNameVisible(true);
+            // Survival mode: walk on ground with gravity (not flying).
+            player.changeGameMode(net.minecraft.world.GameMode.SURVIVAL);
             // Fake network handler so the server can treat them as a connected player
             // (tab list, tp-able) without a real client.
             player.networkHandler = new FakeNetworkHandler(server, player);

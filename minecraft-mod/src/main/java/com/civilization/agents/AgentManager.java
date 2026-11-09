@@ -74,9 +74,11 @@ public class AgentManager {
                         // sync player entity position
                         if (rt.playerEntity != null) {
                             try {
-                                rt.playerEntity.refreshPositionAndAngles(rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0, 0);
                                 rt.playerEntity.teleport(server.getOverworld(), rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
-                            } catch (Exception ignored) {}
+                                CivilizationMod.LOGGER.info("Synced {} to {}", rt.identity.name(), rt.position);
+                            } catch (Exception e) {
+                                CivilizationMod.LOGGER.warn("Teleport failed for {}: {}", rt.identity.name(), e.toString());
+                            }
                         }
                     }
                 } catch (Exception e) {
