@@ -116,7 +116,10 @@ public class AgentManager {
                             try {
                                 BlockPos prev = lastSynced.get(rt);
                                 if (prev == null || !prev.equals(rt.position)) {
+                                    rt.playerEntity.refreshPositionAndAngles(rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
                                     rt.playerEntity.teleport(server.getOverworld(), rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
+                                    rt.playerEntity.setVelocity(0, 0, 0);
+                                    rt.playerEntity.velocityModified = true;
                                     lastSynced.put(rt, rt.position);
                                     CivilizationMod.LOGGER.info("Synced {} to {}", rt.identity.name(), rt.position);
                                 }

@@ -32,11 +32,17 @@ public class AutoSurvival {
             int dz = RAND.nextInt(3) - 1;
             if (dx == 0 && dz == 0) { dx = 1; }
             BlockPos np = rt.position.add(dx, 0, dz);
-            int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, np.getX(), np.getZ());
-            // avoid big drops
-            if (Math.abs(y - rt.position.getY()) <= 2) {
-                rt.position = new BlockPos(np.getX(), y, np.getZ());
-                CivilizationMod.LOGGER.info("Walk {} -> {}", rt.identity.name(), rt.position);
+            // find solid ground: top non-air block, stand on top
+            int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, np.getX(), np.getZ());
+            // getTopY returns air block above surface; feet should be at y (surface+1 already). 
+            // Ensure the block below is solid.
+            BlockPos below = new BlockPos(np.getX(), y - 1, np.getZ());
+            if (world.getBlockState(below).isSolidBlock(world, below)) {
+                // avoid big drops/climbs
+                if (Math.abs(y - rt.position.getY()) <= 3) {
+                    rt.position = new BlockPos(np.getX(), y, np.getZ());
+                    CivilizationMod.LOGGER.info("Walk {} -> {}", rt.identity.name(), rt.position);
+                }
             }
         }
         // MLG clutch: if falling, place water (placeholder, no AI)
