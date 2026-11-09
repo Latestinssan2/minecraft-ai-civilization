@@ -55,6 +55,10 @@ public class BackendClient {
         post("/api/observations", Map.of("agent_id", agentId, "observation", obs));
     }
 
+    public void sendChat(String sender, String content) {
+        post("/api/chat/ingame", Map.of("sender", sender, "content", content));
+    }
+
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> pullActions(String agentId) {
         String body = get("/api/agents/" + agentId + "/actions/pending");

@@ -243,6 +243,15 @@ def make_handler(ctx: AppContext):
                 if model:
                     agent.cfg.model = model
                 return self._send_json(200, {"status": "ok", "model": agent.cfg.model})
+            if path == "/api/chat/ingame":
+                sender = body.get("sender", "player")
+                content = body.get("content", "")
+                if content:
+                    ctx.message_bus.send(sender=sender, receiver="broadcast", content=content, context="ingame_chat")
+                    ctx.db.add_event("ingame_chat", f"{sender}: {content}", related_agents=[])
+                    ctx.scheduler.trigger_all(f"chat from {sender}: {content}")
+                return self._send_json(200, {"status": "ok"})
+
             if path == "/api/messages":
                 msg = ctx.message_bus.send(
                     sender=body.get("sender"),

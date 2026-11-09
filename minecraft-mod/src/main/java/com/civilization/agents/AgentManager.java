@@ -56,6 +56,21 @@ public class AgentManager {
         }
         running = true;
         startPolling(cfg);
+
+        // In-game chat -> notify agents
+        try {
+            net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
+                try {
+                    String content = message.getContent().getString();
+                    String senderName = sender.getName().getString();
+                    CivilizationMod.getBackendClient().sendChat(senderName, content);
+                } catch (Exception e) {
+                    CivilizationMod.LOGGER.warn("Chat forward failed: {}", e.toString());
+                }
+            });
+        } catch (Exception e) {
+            CivilizationMod.LOGGER.warn("Chat event registration failed: {}", e.toString());
+        }
     }
 
     private void startPolling(ModConfig cfg) {
