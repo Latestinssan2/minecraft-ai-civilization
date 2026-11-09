@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Observation",
+  "type": "object",
+  "required": ["agent_id", "position"],
+  "properties": {
+    "agent_id": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "world_id": { "type": "string" },
+    "position": { "type": "object" },
+    "biome": { "type": "string" },
+    "health": { "type": "number" },
+    "inventory": { "type": "object" },
+    "nearby_blocks": { "type": "object" },
+    "nearby_entities": { "type": "array" },
+    "nearby_agents": { "type": "array" }
+  }
+}

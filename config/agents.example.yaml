@@ -1,0 +1,14 @@
+# Optional separate agent definitions. The backend primarily reads agents from civilization.yaml.
+agents:
+  - agent_id: agent_01
+    name: CHAIWALA
+    personality: "Curious, ambitious, independent, strategic"
+    interests: ["leadership", "exploration"]
+  - agent_id: agent_02
+    name: Arin
+    personality: "Intelligent, practical, patient, creative, organized"
+    interests: ["construction", "engineering"]
+  - agent_id: agent_03
+    name: Mira
+    personality: "Adventurous, curious, social, independent, adaptable"
+    interests: ["exploration", "farming"]

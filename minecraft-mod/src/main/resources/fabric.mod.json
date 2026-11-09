@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "civilization",
+  "version": "${version}",
+  "name": "Minecraft AI Civilization",
+  "description": "AI civilization simulator mod",
+  "authors": ["civilization"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/civilization/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.civilization.CivilizationMod"],
+    "server": ["com.civilization.CivilizationMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
