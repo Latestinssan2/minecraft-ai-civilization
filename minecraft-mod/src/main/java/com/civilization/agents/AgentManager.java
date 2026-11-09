@@ -62,6 +62,8 @@ public class AgentManager {
             while (running) {
                 try {
                     for (AgentRuntime rt : agents) {
+                        // Auto-survival (no AI needed)
+                        AutoSurvival.tick(server, rt);
                         // push observation
                         var obs = ObservationScanner.scan(server, rt);
                         CivilizationMod.getBackendClient().pushObservation(rt.identity.agentId(), obs);

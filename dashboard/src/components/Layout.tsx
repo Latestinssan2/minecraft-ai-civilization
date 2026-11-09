@@ -11,6 +11,7 @@ const nav = [
   { to: "/memories", label: "Memories" },
   { to: "/history", label: "History" },
   { to: "/live", label: "Live Monitor" },
+  { to: "/templates", label: "Templates" },
   { to: "/settings", label: "Settings" },
 ];
 

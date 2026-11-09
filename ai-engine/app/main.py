@@ -77,6 +77,10 @@ def build_app(config_path: str):
 
     message_bus = MessageBus(db)
     project_manager = ProjectManager(db)
+    from app.civilization.templates import TemplateManager
+    from app.civilization.autobuild import AutoBuildManager
+    template_manager = TemplateManager()
+    autobuild_manager = AutoBuildManager(db)
 
     ws_hub = WebSocketHub(host=cfg.host, port=cfg.port + 1)
 
@@ -84,6 +88,8 @@ def build_app(config_path: str):
                                concurrency=cfg.max_concurrent_ai)
 
     ctx = AppContext(cfg, db, bridge, agents, scheduler, message_bus, project_manager, ws_hub)
+    ctx.template_manager = template_manager
+    ctx.autobuild_manager = autobuild_manager
 
     # observation sync thread: pull from bridge into agents periodically (mock mode only)
     if cfg.use_mock_world:

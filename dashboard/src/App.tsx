@@ -10,6 +10,7 @@ import Memories from "./pages/Memories";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
 import LiveMonitor from "./pages/LiveMonitor";
+import Templates from "./pages/Templates";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="history" element={<History />} />
           <Route path="settings" element={<Settings />} />
           <Route path="live" element={<LiveMonitor />} />
+          <Route path="templates" element={<Templates />} />
         </Route>
       </Routes>
     </BrowserRouter>

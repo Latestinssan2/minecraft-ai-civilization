@@ -168,6 +168,18 @@ CREATE TABLE IF NOT EXISTS historical_events (
     timestamp TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS agent_profiles (
+    profile_id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    personality TEXT NOT NULL,
+    interests TEXT NOT NULL DEFAULT '[]',
+    skin TEXT DEFAULT '',
+    memory_snapshot TEXT DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    is_default INTEGER DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS resource_ledger (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agent_id TEXT,
@@ -206,6 +218,9 @@ class Database:
             # migrations for new columns
             cols = {r[1] for r in self.conn.execute("PRAGMA table_info(agents)").fetchall()}
             dcols = {r[1] for r in self.conn.execute("PRAGMA table_info(decisions)").fetchall()}
+            for col, decl in (("skin", "TEXT DEFAULT ''"), ("profile_name", "TEXT DEFAULT 'default'")):
+                if col not in cols:
+                    self.conn.execute(f"ALTER TABLE agents ADD COLUMN {col} {decl}")
             for col, decl in (("intention", "TEXT DEFAULT ''"), ("thoughts", "TEXT DEFAULT ''")):
                 if col not in dcols:
                     self.conn.execute(f"ALTER TABLE decisions ADD COLUMN {col} {decl}")
@@ -225,22 +240,25 @@ class Database:
         now = now_iso()
         with self._lock:
             self.conn.execute(
-                """INSERT INTO agents (agent_id,name,personality,interests,current_goal,current_activity,intention,thoughts,position,health,hunger,inventory,hotbar_slot,status,last_decision_at,last_message,alert,created_at,updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """INSERT INTO agents (agent_id,name,personality,interests,current_goal,current_activity,intention,thoughts,position,health,hunger,inventory,hotbar_slot,skin,profile_name,status,last_decision_at,last_message,alert,created_at,updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(agent_id) DO UPDATE SET
                      name=excluded.name, personality=excluded.personality, interests=excluded.interests,
                      current_goal=excluded.current_goal, current_activity=excluded.current_activity,
                      intention=excluded.intention, thoughts=excluded.thoughts,
                      position=excluded.position, health=excluded.health, hunger=excluded.hunger,
                      inventory=excluded.inventory, hotbar_slot=excluded.hotbar_slot,
+                     skin=excluded.skin, profile_name=excluded.profile_name,
                      status=excluded.status, last_decision_at=excluded.last_decision_at,
                      last_message=excluded.last_message, alert=excluded.alert, updated_at=excluded.updated_at""",
                 (agent_id, name, personality, json.dumps(interests),
                  state.get("current_goal", ""), state.get("current_activity", "idle"),
                  state.get("intention", ""), state.get("thoughts", ""),
                  json.dumps(state.get("position", {})), state.get("health", 20.0), state.get("hunger", 20.0),
-                 json.dumps(state.get("inventory", {})), state.get("hotbar_slot", 0), state.get("status", "active"),
-                 state.get("last_decision_at"), state.get("last_message"), state.get("alert"), now, now))
+                 json.dumps(state.get("inventory", {})), state.get("hotbar_slot", 0),
+                 state.get("skin", ""), state.get("profile_name", "default"),
+                 state.get("status", "active"), state.get("last_decision_at"), state.get("last_message"),
+                 state.get("alert"), now, now))
             self.conn.execute(
                 """INSERT INTO agent_personalities (agent_id,personality,interests) VALUES (?,?,?)
                    ON CONFLICT(agent_id) DO UPDATE SET personality=excluded.personality, interests=excluded.interests""",
@@ -274,6 +292,8 @@ class Database:
             "hunger": r["hunger"] if "hunger" in r.keys() and r["hunger"] is not None else 20.0,
             "inventory": json.loads(r["inventory"] or "{}"),
             "hotbar_slot": r["hotbar_slot"] if "hotbar_slot" in r.keys() and r["hotbar_slot"] is not None else 0,
+            "skin": r["skin"] if "skin" in r.keys() else "",
+            "profile_name": r["profile_name"] if "profile_name" in r.keys() else "default",
             "alert": r["alert"] if "alert" in r.keys() else None,
             "status": r["status"] or "active",
             "last_decision_at": r["last_decision_at"],
@@ -648,6 +668,64 @@ class Database:
             self.conn.execute(
                 "INSERT INTO llm_requests (agent_id,provider,model,prompt_tokens,completion_tokens,latency_ms,status,timestamp) VALUES (?,?,?,?,?,?,?,?)",
                 (agent_id, provider, model, prompt_tokens, completion_tokens, latency_ms, status, now_iso()))
+            self.conn.commit()
+
+    def save_profile(self, agent_id, name, personality, interests, skin="", memory_snapshot=None, is_default=False):
+        import json as _j
+        pid = f"profile_{agent_id}_{name}".replace(" ", "_")
+        now = now_iso()
+        with self._lock:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO agent_profiles (profile_id,agent_id,name,personality,interests,skin,memory_snapshot,created_at,is_default)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (pid, agent_id, name, personality, _j.dumps(interests), skin, _j.dumps(memory_snapshot or []),
+                 now, 1 if is_default else 0))
+            self.conn.commit()
+        return pid
+
+    def list_profiles(self, agent_id=None):
+        q = "SELECT * FROM agent_profiles"
+        params = []
+        if agent_id:
+            q += " WHERE agent_id=?"; params.append(agent_id)
+        q += " ORDER BY created_at DESC"
+        with self._lock:
+            rows = self.conn.execute(q, params).fetchall()
+            out = []
+            for r in rows:
+                out.append({
+                    "profile_id": r["profile_id"],
+                    "agent_id": r["agent_id"],
+                    "name": r["name"],
+                    "personality": r["personality"],
+                    "interests": json.loads(r["interests"] or "[]"),
+                    "skin": r["skin"],
+                    "memory_snapshot": json.loads(r["memory_snapshot"] or "[]"),
+                    "created_at": r["created_at"],
+                    "is_default": bool(r["is_default"]),
+                })
+            return out
+
+    def get_profile(self, profile_id):
+        with self._lock:
+            r = self.conn.execute("SELECT * FROM agent_profiles WHERE profile_id=?", (profile_id,)).fetchone()
+            if not r:
+                return None
+            return {
+                "profile_id": r["profile_id"],
+                "agent_id": r["agent_id"],
+                "name": r["name"],
+                "personality": r["personality"],
+                "interests": json.loads(r["interests"] or "[]"),
+                "skin": r["skin"],
+                "memory_snapshot": json.loads(r["memory_snapshot"] or "[]"),
+                "created_at": r["created_at"],
+                "is_default": bool(r["is_default"]),
+            }
+
+    def delete_profile(self, profile_id):
+        with self._lock:
+            self.conn.execute("DELETE FROM agent_profiles WHERE profile_id=?", (profile_id,))
             self.conn.commit()
 
     def llm_stats(self):

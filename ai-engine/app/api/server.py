@@ -10,6 +10,8 @@ from typing import Any, Dict, Optional
 
 from app.agents.scheduler import AgentScheduler
 from app.civilization.projects import ProjectManager
+from app.civilization.templates import TemplateManager
+from app.civilization.autobuild import AutoBuildManager
 from app.communication.message_bus import MessageBus
 from app.config import AppConfig
 from app.database import Database
@@ -150,6 +152,14 @@ def make_handler(ctx: AppContext):
             if path == "/api/events":
                 limit = int(qs.get("limit", ["100"])[0])
                 return self._send_json(200, ctx.db.get_events(limit=limit))
+            if path == "/api/templates":
+                return self._send_json(200, ctx.template_manager.list())
+            if path.startswith("/api/templates/"):
+                tid = path.split("/")[-1]
+                return self._send_json(200, ctx.template_manager.get(tid))
+            if path == "/api/profiles":
+                aid = qs.get("agent_id", [None])[0]
+                return self._send_json(200, ctx.db.list_profiles(agent_id=aid))
             if path == "/api/civilization":
                 agents = ctx.db.list_agents()
                 projects = ctx.db.list_projects()
@@ -288,6 +298,145 @@ def make_handler(ctx: AppContext):
                                  related_agents=body.get("related_agents"), related_project=body.get("related_project"))
                 ctx.broadcast_state()
                 return self._send_json(200, {"status": "ok"})
+            if path == "/api/agents/add":
+                aid = body.get("agent_id")
+                if not aid:
+                    return self._send_json(400, {"error": "agent_id required"})
+                name = body.get("name", aid)
+                personality = body.get("personality", "")
+                interests = body.get("interests", [])
+                skin = body.get("skin", "")
+                from app.config import AgentConfig
+                from app.agents.agent import Agent
+                ac = AgentConfig(agent_id=aid, name=name, personality=personality, interests=interests)
+                ctx.db.upsert_agent(aid, name, personality, interests, {"skin": skin})
+                prov = ctx.agent_list[0].provider if ctx.agent_list else None
+                agent = Agent(ac, ctx.db, prov, ctx.cfg.initial_instruction or "")
+                agent.state.skin = skin
+                agent.persist()
+                ctx.agents[aid] = agent
+                ctx.agent_list.append(agent)
+                ctx.scheduler.agents[aid] = agent
+                ctx.scheduler.agent_list.append(agent)
+                # seed memory
+                agent.add_memory(f"I am {name}, a member of the civilization.", memory_type="long_term", importance=0.9)
+                return self._send_json(201, agent.to_state_dict())
+
+            if path.startswith("/api/agents/") and path.endswith("/rename"):
+                aid = path.split("/")[3]
+                agent = ctx.agents.get(aid)
+                if not agent:
+                    return self._send_json(404, {"error": "agent not found"})
+                if body.get("name"):
+                    agent.name = body["name"]
+                    agent.state.name = body["name"]
+                    agent.state.current_activity = agent.state.current_activity
+                if body.get("personality"):
+                    agent.personality = body["personality"]
+                    agent.state.personality = body["personality"]
+                if body.get("interests"):
+                    agent.interests = body["interests"]
+                    agent.state.interests = body["interests"]
+                if body.get("skin") is not None:
+                    agent.state.skin = body["skin"]
+                agent.persist()
+                ctx.db.upsert_agent(aid, agent.name, agent.personality, agent.interests, agent.state.to_dict())
+                return self._send_json(200, agent.to_state_dict())
+
+            if path.startswith("/api/agents/") and path.endswith("/skin"):
+                aid = path.split("/")[3]
+                agent = ctx.agents.get(aid)
+                if not agent:
+                    return self._send_json(404, {"error": "agent not found"})
+                agent.state.skin = body.get("skin", "")
+                agent.persist()
+                ctx.db.upsert_agent(aid, agent.name, agent.personality, agent.interests, agent.state.to_dict())
+                return self._send_json(200, {"status": "ok", "skin": agent.state.skin})
+
+            if path.startswith("/api/agents/") and path.endswith("/restore-default"):
+                aid = path.split("/")[3]
+                agent = ctx.agents.get(aid)
+                if not agent:
+                    return self._send_json(404, {"error": "agent not found"})
+                # restore from default profile if exists
+                profs = ctx.db.list_profiles(agent_id=aid)
+                default = next((p for p in profs if p["is_default"]), None)
+                if default:
+                    agent.personality = default["personality"]
+                    agent.interests = default["interests"]
+                    agent.state.personality = default["personality"]
+                    agent.state.interests = default["interests"]
+                    agent.state.skin = default["skin"]
+                    agent.persist()
+                return self._send_json(200, agent.to_state_dict())
+
+            if path == "/api/profiles":
+                pid = ctx.db.save_profile(
+                    agent_id=body.get("agent_id"),
+                    name=body.get("name", "profile"),
+                    personality=body.get("personality", ""),
+                    interests=body.get("interests", []),
+                    skin=body.get("skin", ""),
+                    memory_snapshot=body.get("memory_snapshot", []),
+                    is_default=body.get("is_default", False),
+                )
+                return self._send_json(201, {"profile_id": pid})
+
+            if path.startswith("/api/profiles/") and path.endswith("/restore"):
+                pid = path.split("/")[3]
+                prof = ctx.db.get_profile(pid)
+                if not prof:
+                    return self._send_json(404, {"error": "profile not found"})
+                aid = prof["agent_id"]
+                agent = ctx.agents.get(aid)
+                if agent:
+                    agent.personality = prof["personality"]
+                    agent.interests = prof["interests"]
+                    agent.state.personality = prof["personality"]
+                    agent.state.interests = prof["interests"]
+                    agent.state.skin = prof["skin"]
+                    agent.persist()
+                return self._send_json(200, {"status": "ok"})
+
+            if path.startswith("/api/profiles/") and path.endswith("/delete"):
+                pid = path.split("/")[3]
+                ctx.db.delete_profile(pid)
+                return self._send_json(200, {"status": "ok"})
+
+            if path == "/api/templates/project":
+                proj = ctx.template_manager.create_project(ctx.db, body.get("proposed_by", "agent_01"), body.get("template_id", "house"))
+                if body.get("autobuild"):
+                    ctx.autobuild_manager.plan(proj["project_id"], body.get("proposed_by", "agent_01"), proj.get("requirements", {}))
+                ctx.broadcast_state()
+                return self._send_json(201, proj)
+
+            if path.startswith("/api/projects/") and path.endswith("/autobuild"):
+                pid = path.split("/")[3]
+                proj = ctx.db.get_project(pid)
+                if not proj:
+                    return self._send_json(404, {"error": "project not found"})
+                ctx.autobuild_manager.plan(pid, proj["proposed_by"], proj.get("requirements", {}))
+                return self._send_json(200, {"status": "queued"})
+
+            if path.startswith("/api/agents/") and path.endswith("/actions"):
+                aid = path.split("/")[3]
+                agent = ctx.agents.get(aid)
+                if not agent:
+                    return self._send_json(404, {"error": "agent not found"})
+                from app.models import new_id
+                aid2 = new_id("action")
+                ctx.db.add_action({"action_id": aid2, "agent_id": aid, "action": body.get("action", ""),
+                                   "parameters": body.get("parameters", {}), "status": "queued"})
+                return self._send_json(201, {"action_id": aid2})
+
+            if path.startswith("/api/agents/") and path.endswith("/drop"):
+                aid = path.split("/")[3]
+                from app.models import new_id
+                aid2 = new_id("action")
+                ctx.db.add_action({"action_id": aid2, "agent_id": aid, "action": "drop_item",
+                                   "parameters": body, "status": "queued"})
+                return self._send_json(201, {"action_id": aid2})
+
             # pending actions GET handled in GET; but mod may POST? support GET only
             return self._send_json(404, {"error": "not found"})
 

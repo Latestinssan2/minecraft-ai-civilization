@@ -252,6 +252,7 @@ class AgentState:
     hunger: float = 20.0
     inventory: Dict[str, int] = field(default_factory=dict)
     hotbar_slot: int = 0
+    skin: str = ""
     alert: Optional[str] = None
     last_decision_at: Optional[str] = None
     last_message: Optional[str] = None
@@ -272,6 +273,7 @@ class AgentState:
             "hunger": self.hunger,
             "inventory": self.inventory,
             "hotbar_slot": self.hotbar_slot,
+            "skin": self.skin,
             "alert": self.alert,
             "last_decision_at": self.last_decision_at,
             "last_message": self.last_message,

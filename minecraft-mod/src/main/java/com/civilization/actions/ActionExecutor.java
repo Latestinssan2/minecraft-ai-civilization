@@ -90,6 +90,12 @@ public class ActionExecutor {
                         server.getPlayerManager().broadcast(Text.literal("[" + rt.identity.name() + "] " + msg), false);
                     }
                     case "mine_block", "collect_item", "place_block", "craft_item", "scan_area" -> {}
+                    case "drop_item" -> {
+                        // drop item from inventory (placeholder)
+                    }
+                    case "build_template" -> {
+                        // build from template at origin (placeholder)
+                    }
                     default -> {}
                 }
             } catch (Exception e) {

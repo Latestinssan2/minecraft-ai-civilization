@@ -12,6 +12,7 @@ export default function Agents() {
         <h2 className="text-2xl font-bold">Agents</h2>
         <button onClick={() => api.endpoints.decideAll().then(load)} className="bg-indigo-600 px-3 py-1 rounded text-sm">Decide All</button>
       </div>
+      <AddAgentForm onAdded={load} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {agents.map(a => (
           <div key={a.agent_id} className="bg-slate-900 rounded p-4 border border-slate-800">
@@ -35,6 +36,31 @@ export default function Agents() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AddAgentForm({ onAdded }: { onAdded: () => void }) {
+  const [aid, setAid] = useState("");
+  const [name, setName] = useState("");
+  const [personality, setPersonality] = useState("");
+  const [skin, setSkin] = useState("");
+  const submit = async () => {
+    if (!aid.trim() || !name.trim()) return;
+    await api.post("/api/agents/add", { agent_id: aid, name, personality, interests: [], skin });
+    setAid(""); setName(""); setPersonality(""); setSkin("");
+    onAdded();
+  };
+  return (
+    <div className="bg-slate-900 rounded p-4 border border-slate-800">
+      <h3 className="font-semibold mb-2">Add Agent</h3>
+      <div className="flex flex-wrap gap-2">
+        <input value={aid} onChange={e => setAid(e.target.value)} placeholder="agent_id" className="bg-slate-800 p-2 rounded" />
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="gamertag" className="bg-slate-800 p-2 rounded" />
+        <input value={personality} onChange={e => setPersonality(e.target.value)} placeholder="personality" className="bg-slate-800 p-2 rounded flex-1" />
+        <input value={skin} onChange={e => setSkin(e.target.value)} placeholder="skin URL" className="bg-slate-800 p-2 rounded flex-1" />
+        <button onClick={submit} className="bg-emerald-600 px-4 rounded">Add</button>
       </div>
     </div>
   );
