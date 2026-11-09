@@ -24,6 +24,7 @@ public class AgentManager {
 
     private final MinecraftServer server;
     private final List<AgentRuntime> agents = new ArrayList<>();
+    private final java.util.Map<AgentRuntime, BlockPos> lastSynced = new java.util.HashMap<>();
     private volatile boolean running = false;
     private Thread pollThread;
 
@@ -78,6 +79,28 @@ public class AgentManager {
             while (running) {
                 try {
                     for (AgentRuntime rt : agents) {
+                        // Auto-respawn if dead
+                        if (rt.playerEntity != null && rt.playerEntity.isDead()) {
+                            try {
+                                net.minecraft.server.network.ServerPlayerEntity old = rt.playerEntity;
+                                server.getPlayerManager().remove(old);
+                                net.minecraft.server.network.ServerPlayerEntity np = server.getPlayerManager().respawnPlayer(old, false, net.minecraft.entity.Entity.RemovalReason.KILLED);
+                                np.networkHandler = new FakeNetworkHandler(server, np);
+                                np.refreshPositionAndAngles(rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
+                                server.getPlayerManager().getPlayerList().add(np);
+                                rt.playerEntity = np;
+                                // broadcast tab list entry
+                                try {
+                                    net.minecraft.network.packet.s2c.play.PlayerListS2CPacket pkt = new net.minecraft.network.packet.s2c.play.PlayerListS2CPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.Action.ADD_PLAYER, np);
+                                    for (var p : server.getPlayerManager().getPlayerList()) {
+                                        if (p != np && p.networkHandler != null) p.networkHandler.sendPacket(pkt);
+                                    }
+                                } catch (Exception ignored) {}
+                                CivilizationMod.LOGGER.info("Respawned agent {}", rt.identity.name());
+                            } catch (Exception e) {
+                                CivilizationMod.LOGGER.warn("Respawn failed for {}: {}", rt.identity.name(), e.toString());
+                            }
+                        }
                         // Auto-survival (no AI needed)
                         AutoSurvival.tick(server, rt);
                         // push observation
@@ -86,11 +109,15 @@ public class AgentManager {
                         // pull pending actions
                         var actions = CivilizationMod.getBackendClient().pullActions(rt.identity.agentId());
                         ActionExecutor.execute(server, rt, actions);
-                        // sync player entity position
+                        // sync player entity position only when it changed (so knockback/physics aren't overridden)
                         if (rt.playerEntity != null) {
                             try {
-                                rt.playerEntity.teleport(server.getOverworld(), rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
-                                CivilizationMod.LOGGER.info("Synced {} to {}", rt.identity.name(), rt.position);
+                                BlockPos prev = lastSynced.get(rt);
+                                if (prev == null || !prev.equals(rt.position)) {
+                                    rt.playerEntity.teleport(server.getOverworld(), rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
+                                    lastSynced.put(rt, rt.position);
+                                    CivilizationMod.LOGGER.info("Synced {} to {}", rt.identity.name(), rt.position);
+                                }
                             } catch (Exception e) {
                                 CivilizationMod.LOGGER.warn("Teleport failed for {}: {}", rt.identity.name(), e.toString());
                             }

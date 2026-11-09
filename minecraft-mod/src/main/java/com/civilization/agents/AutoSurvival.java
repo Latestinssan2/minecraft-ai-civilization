@@ -27,7 +27,7 @@ public class AutoSurvival {
         }
         // Autonomous wander (deterministic, no AI cost): move to a nearby random spot
         // Walk one step at a time (like a player) instead of teleporting far.
-        if (RAND.nextInt(2) == 0) {
+        {
             int dx = RAND.nextInt(3) - 1;
             int dz = RAND.nextInt(3) - 1;
             if (dx == 0 && dz == 0) { dx = 1; }
