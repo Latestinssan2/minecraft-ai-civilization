@@ -158,9 +158,23 @@ curl http://localhost:8000/api/ollama/health
 curl http://localhost:8000/api/agents
 ```
 
+### Minecraft bots (real players via Mineflayer)
+The agents now run as **real Minecraft players** using Mineflayer (Node.js), which gives them
+tab-list presence, natural walking, knockback, skins, and pathfinding.
+
+```bash
+cd mineflayer-bots
+npm install
+node main.js
+```
+Bots connect to `localhost:25565` (offline mode) as CHAIWALA, Arin, Mira and talk to the
+Python backend at `http://localhost:8000`.
+
 ### Quick start (all services)
 ```bash
 ./scripts/start-all.sh
+# In another terminal:
+cd mineflayer-bots && node main.js
 ```
 
 ---
