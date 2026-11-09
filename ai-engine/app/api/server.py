@@ -317,6 +317,15 @@ def make_handler(ctx: AppContext):
                 personality = body.get("personality", "")
                 interests = body.get("interests", [])
                 skin = body.get("skin", "")
+                # idempotent: if already registered, just update and return
+                if aid in ctx.agents:
+                    ag = ctx.agents[aid]
+                    if personality: ag.personality = personality
+                    if interests: ag.interests = interests
+                    if skin: ag.state.skin = skin
+                    ag.persist()
+                    ctx.db.upsert_agent(aid, ag.name, ag.personality, ag.interests, ag.state.to_dict())
+                    return self._send_json(200, ag.to_state_dict())
                 from app.config import AgentConfig
                 from app.agents.agent import Agent
                 ac = AgentConfig(agent_id=aid, name=name, personality=personality, interests=interests)
@@ -329,7 +338,6 @@ def make_handler(ctx: AppContext):
                 ctx.agent_list.append(agent)
                 ctx.scheduler.agents[aid] = agent
                 ctx.scheduler.agent_list.append(agent)
-                # seed memory
                 agent.add_memory(f"I am {name}, a member of the civilization.", memory_type="long_term", importance=0.9)
                 return self._send_json(201, agent.to_state_dict())
 
