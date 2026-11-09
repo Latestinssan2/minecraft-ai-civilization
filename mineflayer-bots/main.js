@@ -59,44 +59,50 @@ function createBot(agent) {
   bot.on('end', () => { console.log(`[${agent.name}] disconnected`); setTimeout(() => createBot(agent), 5000); });
 
   async function pushObservation() {
-    const pos = bot.entity.position;
-    const inv = {};
-    for (const item of bot.inventory.items()) {
-      inv[item.name] = (inv[item.name] || 0) + item.count;
+    try {
+      const pos = bot.entity.position;
+      const inv = {};
+      for (const item of (bot.inventory.items() || [])) {
+        inv[item.name] = (inv[item.name] || 0) + item.count;
+      }
+      const mobs = Object.values(bot.entities || {})
+        .filter(e => e && (e.type === 'mob' || e.type === 'hostile'))
+        .slice(0, 10)
+        .map(e => ({ type: e.name || e.mobType || 'mob', x: Math.floor(e.position.x), y: Math.floor(e.position.y), z: Math.floor(e.position.z) }));
+      const dropped = Object.values(bot.entities || {})
+        .filter(e => e && e.type === 'object')
+        .slice(0, 10)
+        .map(e => ({ item: 'item', x: Math.floor(e.position.x), y: Math.floor(e.position.y), z: Math.floor(e.position.z) }));
+      const obs = {
+        agent_id: agent.id,
+        position: { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) },
+        biome: 'unknown',
+        health: bot.health,
+        hunger: bot.food,
+        inventory: inv,
+        hotbar_slot: bot.quickBarSlot,
+        nearby_mobs: mobs,
+        dropped_items: dropped,
+        nearby_blocks: {},
+        nearby_entities: mobs.map(m => m.type),
+        nearby_agents: AGENTS.filter(a => a.name !== agent.name).map(a => a.id),
+        nearby_signs: [],
+        structures: [],
+      };
+      await api('/api/observations', 'post', { agent_id: agent.id, observation: obs });
+    } catch (e) {
+      // ignore PartialReadError spam
     }
-    const mobs = Object.values(bot.entities)
-      .filter(e => e.type === 'mob' || e.type === 'hostile')
-      .slice(0, 10)
-      .map(e => ({ type: e.name || e.mobType || 'mob', x: Math.floor(e.position.x), y: Math.floor(e.position.y), z: Math.floor(e.position.z) }));
-    const dropped = Object.values(bot.entities)
-      .filter(e => e.type === 'object')
-      .slice(0, 10)
-      .map(e => ({ item: 'item', x: Math.floor(e.position.x), y: Math.floor(e.position.y), z: Math.floor(e.position.z) }));
-    const obs = {
-      agent_id: agent.id,
-      position: { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) },
-      biome: 'unknown',
-      health: bot.health,
-      hunger: bot.food,
-      inventory: inv,
-      hotbar_slot: bot.quickBarSlot,
-      nearby_mobs: mobs,
-      dropped_items: dropped,
-      nearby_blocks: {},
-      nearby_entities: mobs.map(m => m.type),
-      nearby_agents: AGENTS.filter(a => a.name !== agent.name).map(a => a.id),
-      nearby_signs: [],
-      structures: [],
-    };
-    await api('/api/observations', 'post', { agent_id: agent.id, observation: obs });
   }
 
   async function pullAndExecute() {
-    const actions = await api(`/api/agents/${agent.id}/actions/pending`);
-    if (!Array.isArray(actions)) return;
-    for (const a of actions) {
-      await executeAction(bot, agent, a);
-    }
+    try {
+      const actions = await api(`/api/agents/${agent.id}/actions/pending`);
+      if (!Array.isArray(actions)) return;
+      for (const a of actions) {
+        await executeAction(bot, agent, a);
+      }
+    } catch (e) {}
   }
 
   async function executeAction(bot, agent, a) {
