@@ -87,9 +87,11 @@ public class AgentManager {
                                 net.minecraft.server.network.ServerPlayerEntity np = server.getPlayerManager().respawnPlayer(old, false, net.minecraft.entity.Entity.RemovalReason.KILLED);
                                 np.networkHandler = new FakeNetworkHandler(server, np);
                                 np.refreshPositionAndAngles(rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
+                                np.setCustomName(net.minecraft.text.Text.literal(rt.identity.name()));
+                                np.setCustomNameVisible(true);
                                 server.getPlayerManager().getPlayerList().add(np);
                                 rt.playerEntity = np;
-                                // broadcast tab list entry
+                                // broadcast tab list entry + entity spawn to real players
                                 try {
                                     net.minecraft.network.packet.s2c.play.PlayerListS2CPacket pkt = new net.minecraft.network.packet.s2c.play.PlayerListS2CPacket(net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.Action.ADD_PLAYER, np);
                                     for (var p : server.getPlayerManager().getPlayerList()) {

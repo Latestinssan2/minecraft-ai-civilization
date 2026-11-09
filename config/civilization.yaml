@@ -21,7 +21,7 @@ ai:
     ollama:
       enabled: true
       base_url: http://localhost:11434
-      model: qwen3:8b
+      model: gpt-oss:120b-cloud
       timeout: 120
       max_concurrency: 1
 

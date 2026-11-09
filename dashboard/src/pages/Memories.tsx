@@ -5,7 +5,7 @@ export default function Memories() {
   const [agentId, setAgentId] = useState("agent_01");
   const [mems, setMems] = useState<any[]>([]);
   const load = () => api.endpoints.agentMemories(agentId).then(setMems).catch(() => {});
-  useEffect(() => { load(); }, [agentId]);
+  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [agentId]);
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Memories</h2>
