@@ -8,6 +8,7 @@ public class AgentRuntime {
     public final AgentIdentity identity;
     public BlockPos position;
     public int health = 20;
+    public net.minecraft.server.network.ServerPlayerEntity playerEntity;
     public AgentRuntime(String id, String name, String personality) {
         List<String> interests = switch (name) {
             case "CHAIWALA" -> List.of("leadership", "exploration", "civilization planning");

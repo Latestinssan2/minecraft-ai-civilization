@@ -47,6 +47,7 @@ public class AgentManager {
             rt.position = spawn;
             agents.add(rt);
             CivilizationMod.LOGGER.info("Spawned agent {} at {}", id, spawn);
+            PlayerAgentSpawner.spawn(server, rt);
         }
         // register with backend
         BackendClient bc = CivilizationMod.getBackendClient();
@@ -70,6 +71,13 @@ public class AgentManager {
                         // pull pending actions
                         var actions = CivilizationMod.getBackendClient().pullActions(rt.identity.agentId());
                         ActionExecutor.execute(server, rt, actions);
+                        // sync player entity position
+                        if (rt.playerEntity != null) {
+                            try {
+                                rt.playerEntity.refreshPositionAndAngles(rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0, 0);
+                                rt.playerEntity.teleport(server.getOverworld(), rt.position.getX() + 0.5, rt.position.getY(), rt.position.getZ() + 0.5, 0.0F, 0.0F);
+                            } catch (Exception ignored) {}
+                        }
                     }
                 } catch (Exception e) {
                     CivilizationMod.LOGGER.error("Agent loop error", e);
