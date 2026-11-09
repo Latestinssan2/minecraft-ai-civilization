@@ -2,7 +2,9 @@ package com.civilization.agents;
 
 import com.civilization.CivilizationMod;
 import com.civilization.config.ModConfig;
+import com.civilization.actions.ActionExecutor;
 import com.civilization.entities.AgentEntity;
+import com.civilization.observation.ObservationScanner;
 import com.civilization.network.BackendClient;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
@@ -49,7 +51,7 @@ public class AgentManager {
         // register with backend
         BackendClient bc = CivilizationMod.getBackendClient();
         for (AgentRuntime rt : agents) {
-            bc.registerAgent(rt.identity.agentId, rt.identity.name, rt.identity.personality, rt.identity.interests());
+            bc.registerAgent(rt.identity.agentId(), rt.identity.name(), rt.identity.personality(), rt.identity.interests());
         }
         running = true;
         startPolling(cfg);
@@ -62,9 +64,9 @@ public class AgentManager {
                     for (AgentRuntime rt : agents) {
                         // push observation
                         var obs = ObservationScanner.scan(server, rt);
-                        CivilizationMod.getBackendClient().pushObservation(rt.identity.agentId, obs);
+                        CivilizationMod.getBackendClient().pushObservation(rt.identity.agentId(), obs);
                         // pull pending actions
-                        var actions = CivilizationMod.getBackendClient().pullActions(rt.identity.agentId);
+                        var actions = CivilizationMod.getBackendClient().pullActions(rt.identity.agentId());
                         ActionExecutor.execute(server, rt, actions);
                     }
                 } catch (Exception e) {

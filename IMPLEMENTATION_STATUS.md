@@ -12,7 +12,7 @@ Last updated: 2026-11-08
 
 ## Phase status
 - Phase 0: Done
-- Phase 1 (Minecraft mod): Source written; compilation UNVERIFIED (no Fabric/Minecraft artifacts cached, no network, no Java 21)
+- Phase 1 (Minecraft mod): Source written and COMPILED SUCCESSFULLY with Fabric Loom 1.19.4, Java 21, Gradle 9.8.0. Jar: dist/civilization-mod-0.1.0.jar
 - Phase 2 (Observation): Backend receives structured observations; mod scanner implemented (unverified)
 - Phase 3 (Actions): Action queue, executor, validation-ish, results persisted
 - Phase 4 (AI brain): Agent brain with personality, goals, decision cycle, structured JSON
@@ -35,6 +35,6 @@ Last updated: 2026-11-08
 - Dashboard WebSocket snapshot only; no granular events.
 
 ## Unverified requirements
-- Minecraft mod compilation and runtime
-- End-to-end Minecraft integration
+- Minecraft mod runtime on a real server (compilation verified)
+- End-to-end Minecraft integration (requires MC server + Ollama)
 - Ollama decision generation (no Ollama installed)

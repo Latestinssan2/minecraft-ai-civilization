@@ -187,7 +187,7 @@ cd dashboard && npm run build
 ---
 
 ## ⚠️ Known Limitations
-- Mod compilation/runtime **unverified** in this environment (no Fabric/Minecraft artifacts, no Java 21, no network).
+- Mod compilation **verified** (Fabric Loom 1.19.4, Java 21). Runtime on a real Minecraft server still requires manual verification (server + Fabric API + Ollama).
 - Ollama not bundled; install separately. If unavailable, decisions queued & retried.
 - Java 21 toolchain not available in build environment; mod targets Java 21.
 

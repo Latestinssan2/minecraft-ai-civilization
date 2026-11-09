@@ -1,5 +1,6 @@
 package com.civilization;
 
+import com.civilization.agents.AgentManager;
 import com.civilization.config.ModConfig;
 import com.civilization.network.BackendClient;
 import net.fabricmc.api.ModInitializer;
