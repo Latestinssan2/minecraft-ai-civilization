@@ -37,6 +37,8 @@ export default function LiveMonitor() {
               <div className="text-indigo-300 text-lg">{cur.name}</div>
               <div>Coords: {JSON.stringify(cur.position)}</div>
               <div>Health: {cur.health} Hunger: {cur.hunger}</div>
+              <div>Inventory: {Object.keys(cur.inventory || {}).length ? Object.entries(cur.inventory).map(([k,v]) => `${k}×${v}`).join(", ") : "empty"}</div>
+              <div>Hotbar slot: {cur.hotbar_slot}</div>
               <div>Activity: {cur.current_activity}</div>
               <div>Goal: {cur.current_goal}</div>
               <div className="text-amber-300">Intention: {cur.intention}</div>

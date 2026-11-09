@@ -28,6 +28,7 @@ export default function Agents() {
               <div><span className="text-slate-400">Activity:</span> {a.current_activity}</div>
               <div><span className="text-slate-400">Health:</span> {a.health} <span className="text-slate-400">Hunger:</span> {a.hunger}</div>
               <div><span className="text-slate-400">Pos:</span> {JSON.stringify(a.position)}</div>
+              <div><span className="text-slate-400">Inventory:</span> {Object.keys(a.inventory || {}).length ? Object.entries(a.inventory).map(([k,v]) => `${k}×${v}`).join(", ") : "empty"}</div>
               {a.alert && <div className="text-red-400 text-xs">⚠ {a.alert}</div>}
             </div>
             <div className="mt-3 flex gap-2">

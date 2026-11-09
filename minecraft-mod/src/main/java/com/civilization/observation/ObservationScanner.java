@@ -28,9 +28,27 @@ public class ObservationScanner {
         p.put("x", pos.getX()); p.put("y", pos.getY()); p.put("z", pos.getZ());
         obs.put("position", p);
         obs.put("biome", world.getBiome(pos).getKey().map(k -> k.getValue().toString()).orElse("unknown"));
-        obs.put("health", rt.health);
-        obs.put("hunger", 20); // placeholder; real via player entity if used
-        obs.put("hotbar_slot", 0);
+        // Read real health/hunger/inventory/hotbar from the player entity when available.
+        int health = rt.health;
+        int hunger = 20;
+        int hotbar = 0;
+        java.util.Map<String, Integer> inv = new java.util.HashMap<>();
+        if (rt.playerEntity != null) {
+            health = (int) rt.playerEntity.getHealth();
+            hunger = (int) rt.playerEntity.getHungerManager().getFoodLevel();
+            hotbar = rt.playerEntity.getInventory().selectedSlot;
+            for (int i = 0; i < rt.playerEntity.getInventory().size(); i++) {
+                net.minecraft.item.ItemStack st = rt.playerEntity.getInventory().getStack(i);
+                if (st != null && !st.isEmpty()) {
+                    String name = net.minecraft.registry.Registries.ITEM.getId(st.getItem()).getPath();
+                    inv.merge(name, st.getCount(), Integer::sum);
+                }
+            }
+            rt.health = health;
+        }
+        obs.put("health", health);
+        obs.put("hunger", hunger);
+        obs.put("hotbar_slot", hotbar);
 
         Map<String, Integer> blocks = new HashMap<>();
         for (int dx = -radius; dx <= radius; dx++) {
@@ -99,7 +117,7 @@ public class ObservationScanner {
         // nearby agents placeholder
         obs.put("nearby_agents", new ArrayList<>());
         obs.put("nearby_entities", mobs.stream().map(m -> (String) m.get("type")).distinct().toList());
-        obs.put("inventory", new HashMap<>());
+        obs.put("inventory", inv);
         obs.put("structures", new ArrayList<>()); // located via locate_structure action
         return obs;
     }
