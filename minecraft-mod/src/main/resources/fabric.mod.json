@@ -10,8 +10,7 @@
   "icon": "assets/civilization/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.civilization.CivilizationMod"],
-    "server": ["com.civilization.CivilizationMod"]
+    "main": ["com.civilization.CivilizationMod"]
   },
   "depends": {
     "fabricloader": ">=0.16.0",
